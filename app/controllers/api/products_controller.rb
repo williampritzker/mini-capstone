@@ -1,7 +1,25 @@
 class Api::ProductsController < ApplicationController
   
+  before_action :authenticate_admin, except: [:index, :show]
+
   def index
     @products = Product.all
+
+    if params[:name]
+      @products = Product.where("name LIKE ?", "%#{params[:name]}%")
+    end
+
+    # if params[:price_sort]
+    #   @products = @products.order(price: :asc)
+    # else 
+    #   @products = @products.order(id: :asc)
+    # end
+
+    if params[:category]
+      category = Category.find_by(name: params[:category])
+      @products = category.products
+    end
+
     render 'index.json.jbuilder'
   end
 
@@ -11,20 +29,25 @@ class Api::ProductsController < ApplicationController
   end
 
   def create
-    @product = Product.create(name: params[:name], price: params[:price], image_url: params[:image_url], description: params[:description])
+    @product = Product.create(name: params[:name], price: params[:price], description: params[:description])
+    if @product.save
     render 'show.json.jbuilder'
+    else 
+    render json: {errors: @product.errors.full_messages}, status: :unprocessable_entity
+    end
   end
 
   def update
     @product = Product.find(params[:id])
-    @product.id = params[:id] || @product.id
     @product.name = params[:name] || @product.name
     @product.price = params[:price] || @product.price
-    @product.image_url = params[:image_url] || @product.image_url
     @product.description = params[:description] || @product.description
 
-    @product.save
+   if @product.save
     render 'show.json.jbuilder'
+    else 
+    render json: {errors: @product.errors.full_messages}, status: :unprocessable_entity
+    end
   end
 
   def destroy
